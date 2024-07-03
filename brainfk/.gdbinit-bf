@@ -1,0 +1,15 @@
+# My own brainfuck commands
+file ./bf
+#br *0x8048655
+#br *0x804863A
+br *0x804878E
+#br *0xf7e499e0
+br main
+#br *0x08048700
+r < payload
+br *0xf7e55aa9
+br *0xf7ed85da
+br *0xf7e499e0
+#br *0xf7e76980
+c
+c
